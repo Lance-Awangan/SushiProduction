@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8" />
-    <title>寿司 日次生産アプリ v2</title>
+    <title>寿司 日次生産アプリ v0.1</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="manifest" href="manifest.json" />
     <style>
@@ -322,7 +322,7 @@
                 </div>
                 <div class="toolbar-right">
                     <div class="chip">
-                        <strong>v2</strong>・オフライン対応
+                        <strong>v-0.1</strong>・オフライン対応
                     </div>
                     <button class="btn secondary" id="darkToggle" title="ダークモード切替">
                         🌙
@@ -348,7 +348,7 @@
             <section class="totals" id="totals">
                 <div class="totals-header">
                     <div class="totals-title">本日サマリー</div>
-                    <div class="version-tag">寿司アプリ v2</div>
+                    <div class="version-tag">寿司アプリ v0.1</div>
                 </div>
                 <div class="totals-body" id="totalsBody"></div>
             </section>
@@ -356,9 +356,9 @@
     </div>
 
     <script>
-        const APP_VERSION = "2.0.0";
+        const APP_VERSION = "0.1.0";
         const GRAMS_PER_KAN = 17.5;
-        const STORAGE_KEY = "sushi_daily_packs_v2";
+        const STORAGE_KEY = "sushi_daily_packs_v0.1";
 
         const PRODUCTS = [
             { name: "真", price: 7990, shariPer: 40.0, makiG: 0.0 },
@@ -656,6 +656,14 @@
                         console.log("SW registered:", reg.scope, "version", APP_VERSION);
                     })
                     .catch(err => console.error("SW registration failed:", err));
+            });
+
+            // 🔔 listen for "NEW_VERSION" from the SW and auto-reload
+            navigator.serviceWorker.addEventListener("message", (event) => {
+                if (event.data && event.data.type === "NEW_VERSION") {
+                    console.log("New SW version available, reloading page...");
+                    window.location.reload();
+                }
             });
         }
 
