@@ -501,39 +501,58 @@
 
         function calculateAll() {
             let totalPacks = 0;
-            let totalKan = 0;
-            let totalKg = 0;
-            let totalYen = 0;
-            let totalMakiKg = 0;
+            let totalKan = 0;  // にぎり用：貫
+            let totalNigiriKg = 0;  // にぎりシャリ(kg)
+            let totalYen = 0;  
+            let totalMakiKg = 0;  // 巻物シャリ(kg)
 
             PRODUCTS.forEach((p, index) => {
                 const input = document.querySelector(`input[data-index="${index}"]`);
                 const packs = Number(input.value) || 0;
 
+                // にぎり / 丼 のシャリ(貫) → kg
                 const totalShariKan = packs * p.shariPer;
-                const totalShariKg = totalShariKan * (GRAMS_PER_KAN / 1000);
+                const nigiriKg = totalShariKan * (GRAMS_PER_KAN / 1000);
+
+                // 金額
                 const totalPrice = packs * p.price;
+
+                // 巻物(g) → kg
                 const totalMakiG = packs * p.makiG;
-                const itemMakiKg = totalMakiG / 1000;
+                const makiKg = totalMakiG / 1000;
+
+                // この商品の合計シャリ(kg) = にぎり + 巻物
+                const totalKgForCard = nigiriKg + makiKg;
 
                 const sel = i => document.querySelector(`[data-role="row${index}_${i}"]`);
-                sel(1).textContent = totalShariKan ? totalShariKan.toFixed(2) : "";
-                sel(2).textContent = totalShariKg ? totalShariKg.toFixed(3) : "";
-                sel(3).textContent = totalPrice ? fmtYen(totalPrice) : "";
-                sel(4).textContent = totalMakiG ? totalMakiG.toFixed(0) : "";
-                sel(5).textContent = itemMakiKg ? itemMakiKg.toFixed(3) : "";
+                // row0: 1パック当たりシャリ(貫)
+                if (sel(0)) sel(0).textContent = p.shariPer.toFixed(2);
+                // row1: 合計シャリ(貫)
+                if (sel(1)) sel(1).textContent = totalShariKan ? totalShariKan.toFixed(2) : "";
+                // row2: 合計シャリ(kg)  ※にぎり＋巻物を含めたkg
+                if (sel(2)) sel(2).textContent = totalKgForCard ? totalKgForCard.toFixed(3) : "";
+                // row3: 金額
+                if (sel(3)) sel(3).textContent = totalPrice ? fmtYen(totalPrice) : "";
+                // row4: 巻物(g)
+                if (sel(4)) sel(4).textContent = totalMakiG ? totalMakiG.toFixed(0) : "";
+                // row5: 巻物(kg)
+                if (sel(5)) sel(5).textContent = makiKg ? makiKg.toFixed(3) : "";
 
+                // 🔽 トータル集計
                 totalPacks += packs;
                 totalKan += totalShariKan;
-                totalKg += totalShariKg;
+                totalNigiriKg += nigiriKg;
+                totalMakiKg += makiKg;
                 totalYen += totalPrice;
-                totalMakiKg += itemMakiKg;
             });
+
+            const totalAllKg = totalNigiriKg + totalMakiKg; // にぎり＋巻物
 
             totalsBody.innerHTML = `
             <div class="totals-row"><span>本日パック数合計</span><span>${totalPacks}</span></div>
             <div class="totals-row"><span>本日シャリ合計(貫)</span><span>${totalKan.toFixed(2)}</span></div>
-            <div class="totals-row"><span>本日シャリ合計(kg)</span><span>${totalKg.toFixed(3)}</span></div>
+            <div class="totals-row"><span>本日シャリ合計(kg)（にぎり＋巻物）</span><span>${totalAllKg.toFixed(3)}</span></div>
+            <div class="totals-row"><span>本日巻物シャリ合計(kg)</span><span>${totalMakiKg.toFixed(3)}</span></div>
             <div class="totals-row"><span>本日金額合計</span><span>${fmtYen(totalYen)}</span></div>
           `;
         }
