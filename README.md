@@ -39,14 +39,14 @@ iPhone / Android / PC で動作し、電波が無い状態でも利用できま�
 
 ## フォルダ構成
 
-\`\`\`text 
+```text 
 SushiProduction/
   Program.cs        # ローカル開発用
   docs/             # Web アプリ本体
     index.html
     service-worker.js
     manifest.json 
-\`\`\`
+```
 ---
 English Version
 ---
