@@ -1,9 +1,0 @@
-{
-  "name": "寿司 日次生産アプリ",
-  "short_name": "寿司生産",
-  "start_url": "index.html",
-  "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#1976d2",
-  "icons": []
-}
