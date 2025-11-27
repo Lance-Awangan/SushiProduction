@@ -39,18 +39,16 @@ iPhone / Android / PC で動作し、電波が無い状態でも利用できま�
 
 ## フォルダ構成
 
-
+\`\`\`text 
 SushiProduction/
   Program.cs        # ローカル開発用
   docs/             # Web アプリ本体
     index.html
     service-worker.js
-    manifest.json
-    icon-192.png
-    icon-512.png
-
+    manifest.json 
+\`\`\`
 ---
-# 🇺🇸 **README — English Version**
+English Version
 ---
 # Sushi Daily Production App (PWA)
 
@@ -100,5 +98,3 @@ SushiProduction/
     index.html
     service-worker.js
     manifest.json
-    icon-192.png
-    icon-512.png
