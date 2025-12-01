@@ -1,10 +1,39 @@
 ﻿<!DOCTYPE html>
 <html lang="ja">
 <head>
+    <!-- Basic meta -->
     <meta charset="UTF-8" />
     <title>寿司 日次生産アプリ v0.1</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <!-- PWA manifest (Android & others) -->
     <link rel="manifest" href="manifest.json" />
+
+    <!-- Theme color for Android status bar -->
+    <meta name="theme-color" content="#1976d2" />
+
+    <!-- iOS: enable PWA mode (fullscreen) -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="寿司生産">
+
+    <!-- iOS: app icon (home screen) -->
+    <link rel="apple-touch-icon" href="/icons/apple-icon-180.png">
+
+    <!-- Optional: iOS splash screens (you can skip at first) -->
+    <!-- Example sizes (you add these files only if you want custom splash) -->
+    <!--
+    <link rel="apple-touch-startup-image" href="/splash/splash-640x1136.png"
+          media="(device-width: 320px) and (device-height: 568px)
+                 and (-webkit-device-pixel-ratio: 2)">
+    <link rel="apple-touch-startup-image" href="/splash/splash-750x1334.png"
+          media="(device-width: 375px) and (device-height: 667px)
+                 and (-webkit-device-pixel-ratio: 2)">
+    -->
+    <!-- Your CSS & JS -->
+    <link rel="stylesheet" href="/main.css">
+    <script defer src="/main.js"></script>
+
     <style>
         :root {
             --bg: #f5f5f7;
@@ -356,8 +385,8 @@
     </div>
 
     <script>
-        const APP_VERSION = "0.1.1";
-        const STORAGE_KEY = "sushi_daily_packs_v0.1.1";
+        const APP_VERSION = "0.1.2";
+        const STORAGE_KEY = "sushi_daily_packs_v0.1.2";
         /**
          * Constant: grams per 1 kan (貫)
          * Changing this affects all kg calculations.

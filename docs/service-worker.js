@@ -1,5 +1,5 @@
 ﻿// ---- version ----
-const CACHE_VERSION = "v8"; // ← bump this when you deploy
+const CACHE_VERSION = "v9"; // ← bump this when you deploy
 const STATIC_CACHE = `sushi-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `sushi-runtime-${CACHE_VERSION}`;
 
@@ -7,8 +7,10 @@ const CORE_ASSETS = [
     "index.html",
     "manifest.json",
     "service-worker.js",
-    "icon-192.png",
-    "icon-512.png"
+    "/icons/icon-192.png",
+    "/icons/icon-512.png",
+    "/icons/apple-icon-180.png",
+    "/icons/maskable-icon-512.png"
 ];
 
 // ---- install ----
@@ -25,7 +27,7 @@ self.addEventListener("install", (event) => {
     self.skipWaiting();
 });
 
-// ---- activate ----
+// Activate: clean old caches
 self.addEventListener("activate", (event) => {
     event.waitUntil(
         (async () => {

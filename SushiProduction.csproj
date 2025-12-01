@@ -17,4 +17,9 @@
     </Content>
   </ItemGroup>
 
+  <ItemGroup>
+    <Folder Include="docs\icons\" />
+    <Folder Include="docs\splash\" />
+  </ItemGroup>
+
 </Project>
