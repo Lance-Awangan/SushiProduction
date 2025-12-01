@@ -1,5 +1,5 @@
 ﻿// ---- version ----
-const CACHE_VERSION = "v11"; // ← bump this when you deploy
+const CACHE_VERSION = "v12"; // ← bump this when you deploy
 const STATIC_CACHE = `sushi-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `sushi-runtime-${CACHE_VERSION}`;
 
