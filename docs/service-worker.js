@@ -1,5 +1,5 @@
 ﻿// ---- version ----
-const CACHE_VERSION = "v12"; // ← bump this when you deploy
+const CACHE_VERSION = "v13"; // ← bump this when you deploy
 const STATIC_CACHE = `sushi-static-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `sushi-runtime-${CACHE_VERSION}`;
 
@@ -7,10 +7,10 @@ const CORE_ASSETS = [
     "index.html",
     "manifest.json",
     "service-worker.js",
-    "/icons/icon-192.png",
-    "/icons/icon-512.png",
-    "/icons/apple-icon-180.png",
-    "/icons/maskable-icon-512.png"
+    "icons/icon-192.png",
+    "icons/icon-512.png",
+    "icons/apple-icon-180.png",
+    "icons/maskable-icon-512.png"
 ];
 
 // ---- install ----
