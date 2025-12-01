@@ -356,10 +356,22 @@
     </div>
 
     <script>
-        const APP_VERSION = "0.1.0";
+        const APP_VERSION = "0.1.1";
+        const STORAGE_KEY = "sushi_daily_packs_v0.1.1";
+        /**
+         * Constant: grams per 1 kan (貫)
+         * Changing this affects all kg calculations.
+         */
         const GRAMS_PER_KAN = 17.5;
-        const STORAGE_KEY = "sushi_daily_packs_v0.1";
 
+        /**
+         * PRODUCTS:
+         * The master product list used to build the UI.
+         * - name: Display name
+         * - price: Price per pack (JPY)
+         * - shariPer: Shari per pack (kan)
+         * - makiG: Rice grams for makimono (0 for nigiri items)
+         */
         const PRODUCTS = [
             { name: "真", price: 7990, shariPer: 40.0, makiG: 0.0 },
             { name: "美", price: 4990, shariPer: 33.0, makiG: 160.0 },
@@ -391,7 +403,9 @@
         ];
 
 
-        // === Theme handling (dark mode) ===
+        /**
+         * Applies the saved theme ("light" or "dark") from localStorage.
+         */
         function applyInitialTheme() {
             const saved = localStorage.getItem("sushi_theme");
             if (saved === "dark" || saved === "light") {
@@ -404,6 +418,9 @@
             }
         }
 
+        /**
+         * Switches between light and dark themes and saves the choice.
+         */
         function toggleTheme() {
             document.documentElement.classList.toggle("dark");
             const isDark = document.documentElement.classList.contains("dark");
@@ -423,6 +440,11 @@
             return "¥" + Math.round(v).toLocaleString("ja-JP");
         }
 
+        /**
+         * Builds the product cards dynamically inside the UI.
+         * Uses PRODUCTS[] to generate input fields and result rows.
+         * Called only once on page load.
+         */
         function buildCards() {
             cardsDiv.innerHTML = "";
 
@@ -499,6 +521,14 @@
             });
         }
 
+        /**
+         * Recalculates all totals including:
+         * - Shari total (kan)
+         * - Shari total (kg)
+         * - Makimono rice (g / kg)
+         * - Total revenue
+         * Updates both the product cards and summary panel.
+         */
         function calculateAll() {
             let totalPacks = 0;
             let totalKan = 0;  // にぎり用：貫
