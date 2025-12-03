@@ -319,25 +319,70 @@
             opacity: 0.8;
         }
 
+        /* ---- PRINT VIEW (1 column) ---- */
+
+        #printView {
+            display: none;
+            font-family: system-ui, -apple-system, "SF Pro Text", "Helvetica Neue", "Segoe UI", sans-serif;
+            font-size: 12px;
+        }
 
         @media print {
             body {
                 background: #ffffff;
                 padding: 0;
-            }
-
-            .toolbar {
-                display: none;
+                margin: 0;
             }
 
             .app-shell {
-                max-width: none;
+                display: none !important; /* 通常UIは印刷しない */
             }
 
-            .card {
-                box-shadow: none;
-                border-radius: 8px;
+            #printView {
+                display: block !important;
+                padding: 10mm 12mm;
             }
+
+            .print-title {
+                font-size: 20px;
+                font-weight: 700;
+                margin-bottom: 4mm;
+            }
+
+            .print-date {
+                margin-bottom: 3mm;
+            }
+
+            .print-hr {
+                border: none;
+                border-top: 2px solid #000;
+                margin: 4mm 0;
+            }
+
+            .section-label-print {
+                font-weight: 700;
+                margin: 3mm 0 2mm;
+                font-size: 14px;
+            }
+
+            table.print-table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-bottom: 4mm;
+                font-size: 12px;
+            }
+
+                table.print-table th,
+                table.print-table td {
+                    border: 1px solid #000;
+                    padding: 3px 6px;
+                    text-align: left;
+                    vertical-align: top;
+                }
+
+                table.print-table th {
+                    background: #f3f4f6;
+                }
         }
     </style>
 </head>
@@ -371,6 +416,9 @@
                 </div>
             </div>
         </header>
+
+        <!-- 印刷専用ビュー -->
+        <div id="printView"></div>
 
         <main>
             <section class="cards" id="cards"></section>
@@ -430,7 +478,6 @@
             { name: "サモン巻き", price: 450, shariPer: 0.0, makiG: 120.0 },
             { name: "トロタク巻き", price: 499, shariPer: 0.0, makiG: 120.0 },
         ];
-
 
         /**
          * Applies the saved theme ("light" or "dark") from localStorage.
@@ -616,6 +663,168 @@
             // <div class="totals-row"><span>本日巻物シャリ合計(kg)</span><span>${totalMakiKg.toFixed(3)}</span></div>
         }
 
+        // 印刷用に最後のトータルを保持
+        let LAST_PRINT_TOTALS = null;
+
+        // 固定ネタ順（※あとで増やせる）
+        const FIXED_NETA_ORDER = [
+            "大トロ", "中トロ", "本赤み", "バチマグロ", "サーモン", "カンパチ",
+            "マグロ", "ぶり", "寿エビ", "生エビ", "あじ", "いか", "エンガワ",
+            "タイ", "穴子"
+        ];
+
+        /**
+         * 製造サマリー（商品別）テーブルを生成
+         */
+        function generateProductSummaryTable() {
+            let html = `
+                <table class="print-table">
+                 <tr>
+                    <th>商品名</th>
+                    <th>P</th>
+                    <th>シャリ(kg)</th>
+                    <th>金額</th>
+                    <th>巻物</th>
+                 </tr>
+             `;
+
+            let totalPacks = 0;
+            let totalKan = 0;
+            let totalNigiriKg = 0;
+            let totalMakiKg = 0;
+            let totalYen = 0;
+
+            PRODUCTS.forEach((p, i) => {
+                const input = document.querySelector(`input[data-index="${i}"]`);
+                const packs = Number(input?.value) || 0;
+                if (!packs) return;
+
+                const totalShariKan = packs * p.shariPer;
+                const nigiriKg = totalShariKan * (GRAMS_PER_KAN / 1000);
+                const totalPrice = packs * p.price;
+                const totalMakiG = packs * p.makiG;
+                const makiKg = totalMakiG / 1000;
+                const totalKgForCard = nigiriKg + makiKg;
+
+                html += `
+          <tr>
+            <td>${p.name}</td>
+            <td>${packs}</td>
+            <td>${totalKgForCard.toFixed(3)}</td>
+            <td>¥${Math.round(totalPrice).toLocaleString("ja-JP")}</td>
+            <td>${totalMakiG}g / ${makiKg.toFixed(3)}kg</td>
+          </tr>
+        `;
+
+                totalPacks += packs;
+                totalKan += totalShariKan;
+                totalNigiriKg += nigiriKg;
+                totalMakiKg += makiKg;
+                totalYen += totalPrice;
+            });
+
+            const totalAllKg = totalNigiriKg + totalMakiKg;
+
+            LAST_PRINT_TOTALS = {
+                packs: totalPacks,
+                kan: totalKan,
+                shariKg: totalAllKg,
+                makiKg: totalMakiKg,
+                yen: totalYen
+            };
+
+            html += "</table>";
+            return html;
+        }
+
+        /**
+         * ネタ別必要数テーブル
+         * ※ 今はまだ本体側にネタ別集計ロジックがないので、
+         *   INGREDIENT_TOTALS が存在する場合だけ使用し、
+         *   ない場合は「今後追加予定」のメッセージを出す。
+         */
+
+        function generateIngredientList() {
+            let html = `<table class="print-table">`;
+
+            if (window.INGREDIENT_TOTALS) {
+                html += `<tr><th>ネタ</th><th>必要枚数</th></tr>`;
+                FIXED_NETA_ORDER.forEach(neta => {
+                    const v = window.INGREDIENT_TOTALS[neta] || 0;
+                    if (v > 0) {
+                        html += `<tr><td>${neta}</td><td>${v}</td></tr>`;
+                    }
+                });
+            } else {
+                html += `
+          <tr>
+            <th>ネタ</th><th>必要枚数</th>
+          </tr>
+          <tr>
+            <td colspan="2">※ ネタ別集計は今後アプリ本体に統合予定です。</td>
+          </tr>
+        `;
+            }
+
+            html += "</table>";
+            return html;
+        }
+
+        /**
+         * 本日合計テーブル
+         */
+        function generateTotals() {
+            const t = LAST_PRINT_TOTALS || {
+                packs: 0,
+                shariKg: 0,
+                makiKg: 0,
+                yen: 0
+            };
+
+            return `
+      <table class="print-table">
+        <tr><th>総パック数</th><td>${t.packs}</td></tr>
+        <tr><th>総シャリ量</th><td>${t.shariKg.toFixed(3)} kg</td></tr>
+        <tr><th>巻物合計</th><td>${t.makiKg.toFixed(3)} kg</td></tr>
+        <tr><th>総売上</th><td>¥${Math.round(t.yen).toLocaleString("ja-JP")}</td></tr>
+      </table>
+    `;
+        }
+
+        /**
+         * 印刷用ビュー全体を組み立てる
+         */
+        function buildPrintView() {
+            const div = document.getElementById("printView");
+            if (!div) return;
+
+            const todayStr = new Date().toLocaleDateString("ja-JP", {
+                year: "numeric",
+                month: "2-digit",
+                day: "2-digit",
+                weekday: "short"
+            });
+
+            const prodTable = generateProductSummaryTable();
+            const ingredientTable = generateIngredientList();
+            const totalsTable = generateTotals();
+
+            div.innerHTML = `
+      <div class="print-title">日次製造サマリー（鮮魚部）</div>
+      <div class="print-date">${todayStr}</div>
+      <hr class="print-hr">
+
+      <div class="section-label-print">【製造数まとめ】</div>
+      ${prodTable}
+
+      <div class="section-label-print">【ネタ別 必要数（切付用）】</div>
+      ${ingredientTable}
+
+      <div class="section-label-print">【本日合計】</div>
+      ${totalsTable}
+    `;
+        }
+
         function attachListeners() {
             cardsDiv.addEventListener("input", (e) => {
                 if (e.target.matches('input[type="number"]')) {
@@ -635,6 +844,7 @@
             });
 
             printBtn.addEventListener("click", () => {
+                buildPrintView();
                 window.print();
             });
 
