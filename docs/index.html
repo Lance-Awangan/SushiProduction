@@ -975,6 +975,110 @@
         `;
         }
 
+        function buildPrintHtmlDocument() {
+            const todayStr = new Date().toLocaleDateString("ja-JP", {
+                year: "numeric",
+                month: "2-digit",
+                day: "2-digit",
+                weekday: "short"
+            });
+
+            // Use your existing generators to get HTML fragments
+            const prodTable = generateProductSummaryTable();
+            const ingredientTable = generateIngredientList();
+            const totalsTable = generateTotals();
+
+            // Full standalone HTML document for the print window
+            return `
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>日次製造サマリー 印刷</title>
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 10mm;
+    }
+    body {
+      font-family: system-ui, -apple-system, "SF Pro Text", "Helvetica Neue", "Segoe UI", sans-serif;
+      font-size: 12px;
+      color: #000;
+      margin: 0;
+      padding: 0;
+    }
+    .print-wrapper {
+      padding: 0;
+    }
+    .print-title {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 4mm;
+    }
+    .print-date {
+      margin-bottom: 3mm;
+    }
+    .print-hr {
+      border: none;
+      border-top: 2px solid #000;
+      margin: 4mm 0;
+    }
+    .section-label-print {
+      font-weight: 700;
+      margin: 3mm 0 2mm;
+      font-size: 14px;
+    }
+    .print-section {
+      margin-bottom: 6mm;
+      page-break-inside: avoid;
+    }
+    .print-section-products {
+      page-break-after: always; /* page 1 */
+    }
+    table.print-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 4mm;
+      font-size: 12px;
+    }
+    table.print-table th,
+    table.print-table td {
+      border: 1px solid #000;
+      padding: 3px 6px;
+      text-align: left;
+      vertical-align: top;
+    }
+    table.print-table th {
+      background: #f3f4f6;
+    }
+  </style>
+</head>
+<body>
+  <div class="print-wrapper">
+    <div class="print-title">日次製造サマリー（鮮魚部）</div>
+    <div class="print-date">${todayStr}</div>
+    <hr class="print-hr">
+
+    <div class="print-section print-section-products">
+      <div class="section-label-print">【製造数まとめ】</div>
+      ${prodTable}
+    </div>
+
+    <div class="print-section">
+      <div class="section-label-print">【ネタ別 必要数（切付用）】</div>
+      ${ingredientTable}
+    </div>
+
+    <div class="print-section">
+      <div class="section-label-print">【本日合計】</div>
+      ${totalsTable}
+    </div>
+  </div>
+</body>
+</html>
+    `;
+        }
+
         /**
          * 印刷用ビュー全体を組み立てる
          */
@@ -1035,24 +1139,28 @@
             });
 
             printBtn.addEventListener("click", () => {
-                buildPrintView();
-                // show printView temporarily for Safari
-                const pv = document.getElementById("printView");
-                pv.style.display = "block";
-                pv.style.position = "static";
-                pv.style.opacity = "1";
+                // Build the HTML string in the current window (so it can use the inputs)
+                const html = buildPrintHtmlDocument();
 
-                // hide the normal UI
-                document.querySelector(".app-shell").style.display = "none";
+                // Open a new window/tab for printing
+                const printWindow = window.open("", "_blank");
 
-                // slight delay so Safari renders the content
+                if (!printWindow) {
+                    alert("Popup blocked. Please allow popups for this site to print.");
+                    return;
+                }
+
+                printWindow.document.open();
+                printWindow.document.write(html);
+                printWindow.document.close();
+
+                // Give Safari / iOS a moment to render before printing
+                printWindow.focus();
                 setTimeout(() => {
-                    window.print();
-
-                    // restore UI after printing
-                    pv.style.display = "none";
-                    document.querySelector(".app-shell").style.display = "";
-                }, 200);
+                    printWindow.print();
+                    // Optional: close the print window afterwards
+                    printWindow.close();
+                }, 500);
             });
 
             saveBtn.addEventListener("click", () => {
