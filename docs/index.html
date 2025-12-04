@@ -433,8 +433,8 @@
     </div>
 
     <script>
-        const APP_VERSION = "0.1.5";
-        const STORAGE_KEY = "sushi_daily_packs_v0.1.5";
+        const APP_VERSION = "0.1.6";
+        const STORAGE_KEY = "sushi_daily_packs_v0.1.6";
         /**
          * Constant: grams per 1 kan (貫)
          * Changing this affects all kg calculations.
@@ -478,6 +478,134 @@
             { name: "サモン巻き", price: 450, shariPer: 0.0, makiG: 120.0 },
             { name: "トロタク巻き", price: 499, shariPer: 0.0, makiG: 120.0 },
         ];
+
+        /**
+         * PRODUCT → NETA (ingredient) breakdown
+         * 各商品1パックあたり、ネタ何枚かを定義する。
+         * ここはお店の「一定」シートに合わせて調整してください。
+         */
+        const PRODUCT_NETA_MAP = {
+            "真": {
+                "大トロ": 4,
+                "中トロ": 4,
+                "サーモン": 4,
+                "カンパチ": 4,
+                "生エビ": 4,
+                "エンガワ": 4,
+                "いくら": 4,
+                "うに": 4,
+                "タマゴ": 4,
+                "ぶり":4,
+            },
+            "美": {
+                "中トロ": 3,
+                "サーモン": 3,
+                "マグロ": 3,
+                "イカ": 3,
+                "生エビ": 3,
+                "カンパチ": 3,
+                "タイ": 3,
+                "いくら": 2,
+                "うに": 2,
+                "ネギとろ": 2,
+                "タマゴ": 3,
+                "穴子":3,
+            },
+            "善": {
+                "マグロ": 4,
+                "イカ": 4,
+                "カンパチ": 4,
+                "サーモン": 4,
+                "寿エビ": 4,
+                "タイ": 4,
+                "いくら": 4,
+                "ネギとろ": 4,
+                "穴子": 4,
+                "角タマ": 4,
+            },
+            "海峡": {
+                "大トロ": 3,
+                "中トロ": 3,
+                "サーモン": 3,
+                "カンパチ": 3,
+                "いくら": 3,
+                "生エビ": 3,
+                "タイ": 3,
+                "イカ": 3,
+            },
+            "さざ波": {
+                "マグロ": 6,
+                "サーモン": 3,
+                "カンパチ": 3,
+                "いくら": 3,
+                "生エビ": 3,
+                "イカ": 3,
+                "タマゴ": 3,
+            },
+            "松": {
+                "中トロ": 2,
+                "サーモン": 1,
+                "カンパチ": 1,
+                "エンガワ": 1,
+                "生エビ": 1,
+                "タイ": 1,
+                "いくら": 1,
+                "うに": 1,
+                "タマゴ": 1,
+            },
+            "竹": {
+                "本赤み": 2,
+                "イカ": 1,
+                "サーモン": 1,
+                "タイ": 1,
+                "カンパチ": 1,
+                "寿エビ": 1,
+                "いくら": 1,
+                "ネギとろ": 1,
+                "タマゴ": 1,
+            },
+            "梅": {
+                "マグロ": 1,
+                "イカ": 1,
+                "サーモン": 1,
+                "カンパチ": 1,
+                "角タマ": 1,
+                "生エビ": 1,
+                "タイ": 1,
+            },
+            "赤レンジアー": {
+                "中トロ": 3,
+                "マグロ": 3,
+            },
+            "白レンジアー": {
+                "マグロ": 3,
+                "タイ": 3,
+                "イカ": 3,
+            },
+            "虹レンジアー": {
+                "マグロ": 1,
+                "イカ": 1,
+                "寿エビ": 1,
+                "いくら": 2,
+                "ネギとろ": 1,
+                "タマゴ": 2,
+            },
+            "橙レンジアー": {
+                "サーモン": 3,
+                "焼サモン": 3,
+            },
+            //"茶助レンジアー": {},
+            "青レンジアー": {
+                "あじ": 3,
+            },
+            "マグロ": { "マグロ": 6 },
+            "タイ": { "タイ": 6 },
+            "サモン": { "サーモン": 6 },
+            "ぶり": { "ぶり": 6 },
+            "寿エビ": { "寿エビ": 6 },
+            "あじ": { "あじ": 6 },
+        };
+
 
         /**
          * Applies the saved theme ("light" or "dark") from localStorage.
@@ -668,10 +796,36 @@
 
         // 固定ネタ順（※あとで増やせる）
         const FIXED_NETA_ORDER = [
-            "大トロ", "中トロ", "本赤み", "バチマグロ", "サーモン", "カンパチ",
+            "大トロ", "中トロ", "本赤み", "マグロ", "サーモン", "カンパチ",
             "マグロ", "ぶり", "寿エビ", "生エビ", "あじ", "いか", "エンガワ",
-            "タイ", "穴子"
+            "タイ", "穴子", "タマゴ", "角タマ", "焼サモン"
         ];
+
+        /**
+         * 現在の入力（packs）からネタ別必要枚数を集計する
+         * 結果は window.INGREDIENT_TOTALS に入れる。
+         */
+        function computeIngredientTotalsFromInputs() {
+            const totals = {}; // { "大トロ": 40, "サーモン": 28, ... }
+
+            PRODUCTS.forEach((p, index) => {
+                const input = document.querySelector(`input[data-index="${index}"]`);
+                const packs = Number(input?.value) || 0;
+                if (!packs) return;
+
+                const netaInfo = PRODUCT_NETA_MAP[p.name];
+                if (!netaInfo) return; // ネタ定義のない商品はスキップ
+
+                Object.keys(netaInfo).forEach(neta => {
+                    const perPackSlices = netaInfo[neta]; // 1パックの枚数
+                    const add = perPackSlices * packs;
+                    totals[neta] = (totals[neta] || 0) + add;
+                });
+            });
+
+            window.INGREDIENT_TOTALS = totals;
+        }
+
 
         /**
          * 製造サマリー（商品別）テーブルを生成
@@ -745,23 +899,40 @@
          */
 
         function generateIngredientList() {
-            let html = `<table class="print-table">`;
+            // 念のため毎回最新状態にする
+            computeIngredientTotalsFromInputs();
+            const totals = window.INGREDIENT_TOTALS || {};
 
-            if (window.INGREDIENT_TOTALS) {
-                html += `<tr><th>ネタ</th><th>必要枚数</th></tr>`;
-                FIXED_NETA_ORDER.forEach(neta => {
-                    const v = window.INGREDIENT_TOTALS[neta] || 0;
+            let html = `
+      <table class="print-table">
+        <tr><th>ネタ</th><th>必要枚数</th></tr>
+    `;
+
+            let hasAny = false;
+
+            FIXED_NETA_ORDER.forEach(neta => {
+                const v = totals[neta] || 0;
+                if (v > 0) {
+                    hasAny = true;
+                    html += `<tr><td>${neta}</td><td>${v}</td></tr>`;
+                }
+            });
+
+            // もし固定リストに無いネタがあれば「その他」として追加もできる
+            Object.keys(totals).forEach(neta => {
+                if (!FIXED_NETA_ORDER.includes(neta)) {
+                    const v = totals[neta];
                     if (v > 0) {
+                        hasAny = true;
                         html += `<tr><td>${neta}</td><td>${v}</td></tr>`;
                     }
-                });
-            } else {
+                }
+            });
+
+            if (!hasAny) {
                 html += `
           <tr>
-            <th>ネタ</th><th>必要枚数</th>
-          </tr>
-          <tr>
-            <td colspan="2">※ ネタ別集計は今後アプリ本体に統合予定です。</td>
+            <td colspan="2">本日ネタ別の必要枚数はありません。</td>
           </tr>
         `;
             }
@@ -769,6 +940,7 @@
             html += "</table>";
             return html;
         }
+
 
         /**
          * 本日合計テーブル
