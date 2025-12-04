@@ -416,10 +416,6 @@
                 </div>
             </div>
         </header>
-
-        <!-- 印刷専用ビュー -->
-        <div id="printView"></div>
-
         <main>
             <section class="cards" id="cards"></section>
             <section class="totals" id="totals">
@@ -432,9 +428,12 @@
         </main>
     </div>
 
+    <!-- 印刷専用ビュー -->
+    <div id="printView"></div>
+
     <script>
-        const APP_VERSION = "0.1.6";
-        const STORAGE_KEY = "sushi_daily_packs_v0.1.6";
+        const APP_VERSION = "0.1.7";
+        const STORAGE_KEY = "sushi_daily_packs_v0.1.7";
         /**
          * Constant: grams per 1 kan (貫)
          * Changing this affects all kg calculations.
@@ -495,7 +494,7 @@
                 "いくら": 4,
                 "うに": 4,
                 "タマゴ": 4,
-                "ぶり":4,
+                "ぶり": 4,
             },
             "美": {
                 "中トロ": 3,
@@ -509,7 +508,7 @@
                 "うに": 2,
                 "ネギとろ": 2,
                 "タマゴ": 3,
-                "穴子":3,
+                "穴子": 3,
             },
             "善": {
                 "マグロ": 4,
@@ -737,7 +736,7 @@
             let totalPacks = 0;
             let totalKan = 0;  // にぎり用：貫
             let totalNigiriKg = 0;  // にぎりシャリ(kg)
-            let totalYen = 0;  
+            let totalYen = 0;
             let totalMakiKg = 0;  // 巻物シャリ(kg)
 
             PRODUCTS.forEach((p, index) => {
@@ -783,11 +782,11 @@
             const totalAllKg = totalNigiriKg + totalMakiKg; // にぎり＋巻物
 
             totalsBody.innerHTML = `
-            <div class="totals-row"><span>本日パック数合計</span><span>${totalPacks}</span></div>
-            <div class="totals-row"><span>本日シャリ合計(貫)</span><span>${totalKan.toFixed(2)}</span></div>
-            <div class="totals-row"><span>本日シャリ合計(kg)（にぎり＋巻物）</span><span>${totalAllKg.toFixed(3)}</span></div>
-            <div class="totals-row"><span>本日金額合計</span><span>${fmtYen(totalYen)}</span></div>
-          `;
+                <div class="totals-row"><span>本日パック数合計</span><span>${totalPacks}</span></div>
+                <div class="totals-row"><span>本日シャリ合計(貫)</span><span>${totalKan.toFixed(2)}</span></div>
+                <div class="totals-row"><span>本日シャリ合計(kg)（にぎり＋巻物）</span><span>${totalAllKg.toFixed(3)}</span></div>
+                <div class="totals-row"><span>本日金額合計</span><span>${fmtYen(totalYen)}</span></div>
+              `;
             // <div class="totals-row"><span>本日巻物シャリ合計(kg)</span><span>${totalMakiKg.toFixed(3)}</span></div>
         }
 
@@ -832,15 +831,15 @@
          */
         function generateProductSummaryTable() {
             let html = `
-                <table class="print-table">
-                 <tr>
-                    <th>商品名</th>
-                    <th>P</th>
-                    <th>シャリ(kg)</th>
-                    <th>金額</th>
-                    <th>巻物</th>
-                 </tr>
-             `;
+                    <table class="print-table">
+                     <tr>
+                        <th>商品名</th>
+                        <th>P</th>
+                        <th>シャリ(kg)</th>
+                        <th>金額</th>
+                        <th>巻物</th>
+                     </tr>
+                 `;
 
             let totalPacks = 0;
             let totalKan = 0;
@@ -861,14 +860,14 @@
                 const totalKgForCard = nigiriKg + makiKg;
 
                 html += `
-          <tr>
-            <td>${p.name}</td>
-            <td>${packs}</td>
-            <td>${totalKgForCard.toFixed(3)}</td>
-            <td>¥${Math.round(totalPrice).toLocaleString("ja-JP")}</td>
-            <td>${totalMakiG}g / ${makiKg.toFixed(3)}kg</td>
-          </tr>
-        `;
+              <tr>
+                <td>${p.name}</td>
+                <td>${packs}</td>
+                <td>${totalKgForCard.toFixed(3)}</td>
+                <td>¥${Math.round(totalPrice).toLocaleString("ja-JP")}</td>
+                <td>${totalMakiG}g / ${makiKg.toFixed(3)}kg</td>
+              </tr>
+            `;
 
                 totalPacks += packs;
                 totalKan += totalShariKan;
@@ -904,9 +903,9 @@
             const totals = window.INGREDIENT_TOTALS || {};
 
             let html = `
-      <table class="print-table">
-        <tr><th>ネタ</th><th>必要枚数</th></tr>
-    `;
+          <table class="print-table">
+            <tr><th>ネタ</th><th>必要枚数</th></tr>
+        `;
 
             let hasAny = false;
 
@@ -931,10 +930,10 @@
 
             if (!hasAny) {
                 html += `
-          <tr>
-            <td colspan="2">本日ネタ別の必要枚数はありません。</td>
-          </tr>
-        `;
+              <tr>
+                <td colspan="2">本日ネタ別の必要枚数はありません。</td>
+              </tr>
+            `;
             }
 
             html += "</table>";
@@ -954,13 +953,13 @@
             };
 
             return `
-      <table class="print-table">
-        <tr><th>総パック数</th><td>${t.packs}</td></tr>
-        <tr><th>総シャリ量</th><td>${t.shariKg.toFixed(3)} kg</td></tr>
-        <tr><th>巻物合計</th><td>${t.makiKg.toFixed(3)} kg</td></tr>
-        <tr><th>総売上</th><td>¥${Math.round(t.yen).toLocaleString("ja-JP")}</td></tr>
-      </table>
-    `;
+          <table class="print-table">
+            <tr><th>総パック数</th><td>${t.packs}</td></tr>
+            <tr><th>総シャリ量</th><td>${t.shariKg.toFixed(3)} kg</td></tr>
+            <tr><th>巻物合計</th><td>${t.makiKg.toFixed(3)} kg</td></tr>
+            <tr><th>総売上</th><td>¥${Math.round(t.yen).toLocaleString("ja-JP")}</td></tr>
+          </table>
+        `;
         }
 
         /**
@@ -982,19 +981,19 @@
             const totalsTable = generateTotals();
 
             div.innerHTML = `
-      <div class="print-title">日次製造サマリー（鮮魚部）</div>
-      <div class="print-date">${todayStr}</div>
-      <hr class="print-hr">
+          <div class="print-title">日次製造サマリー（鮮魚部）</div>
+          <div class="print-date">${todayStr}</div>
+          <hr class="print-hr">
 
-      <div class="section-label-print">【製造数まとめ】</div>
-      ${prodTable}
+          <div class="section-label-print">【製造数まとめ】</div>
+          ${prodTable}
 
-      <div class="section-label-print">【ネタ別 必要数（切付用）】</div>
-      ${ingredientTable}
+          <div class="section-label-print">【ネタ別 必要数（切付用）】</div>
+          ${ingredientTable}
 
-      <div class="section-label-print">【本日合計】</div>
-      ${totalsTable}
-    `;
+          <div class="section-label-print">【本日合計】</div>
+          ${totalsTable}
+        `;
         }
 
         function attachListeners() {
