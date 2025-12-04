@@ -445,8 +445,8 @@
     <div id="printView"></div>
 
     <script>
-        const APP_VERSION = "0.1.8";
-        const STORAGE_KEY = "sushi_daily_packs_v0.1.8";
+        const APP_VERSION = "0.1.9";
+        const STORAGE_KEY = "sushi_daily_packs_v0.1.9";
         /**
          * Constant: grams per 1 kan (貫)
          * Changing this affects all kg calculations.
@@ -1036,7 +1036,23 @@
 
             printBtn.addEventListener("click", () => {
                 buildPrintView();
-                window.print();
+                // show printView temporarily for Safari
+                const pv = document.getElementById("printView");
+                pv.style.display = "block";
+                pv.style.position = "static";
+                pv.style.opacity = "1";
+
+                // hide the normal UI
+                document.querySelector(".app-shell").style.display = "none";
+
+                // slight delay so Safari renders the content
+                setTimeout(() => {
+                    window.print();
+
+                    // restore UI after printing
+                    pv.style.display = "none";
+                    document.querySelector(".app-shell").style.display = "";
+                }, 200);
             });
 
             saveBtn.addEventListener("click", () => {
