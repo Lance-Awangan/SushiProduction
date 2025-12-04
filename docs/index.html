@@ -365,14 +365,12 @@
                 font-size: 14px;
             }
 
-            .print-section {
-                margin-bottom: 6mm;
-                page-break-inside: avoid; /* keep each block together */
+            .print-section-products {
+                page-break-after: always; /* product section ends the page */
             }
 
-            /* This forces Ingredients section to start on new page */
             .print-section-ingredients {
-                page-break-before: always;
+                page-break-before: auto; /* no extra break here */
             }
 
             table.print-table {
@@ -442,8 +440,8 @@
     <div id="printView"></div>
 
     <script>
-        const APP_VERSION = "0.1.7";
-        const STORAGE_KEY = "sushi_daily_packs_v0.1.7";
+        const APP_VERSION = "0.1.8";
+        const STORAGE_KEY = "sushi_daily_packs_v0.1.8";
         /**
          * Constant: grams per 1 kan (貫)
          * Changing this affects all kg calculations.
