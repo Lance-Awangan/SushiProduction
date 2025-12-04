@@ -365,6 +365,16 @@
                 font-size: 14px;
             }
 
+            .print-section {
+                margin-bottom: 6mm;
+                page-break-inside: avoid; /* keep each block together */
+            }
+
+            /* This forces Ingredients section to start on new page */
+            .print-section-ingredients {
+                page-break-before: always;
+            }
+
             table.print-table {
                 width: 100%;
                 border-collapse: collapse;
@@ -981,20 +991,27 @@
             const totalsTable = generateTotals();
 
             div.innerHTML = `
-          <div class="print-title">日次製造サマリー（鮮魚部）</div>
-          <div class="print-date">${todayStr}</div>
-          <hr class="print-hr">
+      <div class="print-title">日次製造サマリー（鮮魚部）</div>
+      <div class="print-date">${todayStr}</div>
+      <hr class="print-hr">
 
-          <div class="section-label-print">【製造数まとめ】</div>
-          ${prodTable}
+      <div class="print-section print-section-products">
+        <div class="section-label-print">【製造数まとめ】</div>
+        ${prodTable}
+      </div>
 
-          <div class="section-label-print">【ネタ別 必要数（切付用）】</div>
-          ${ingredientTable}
+      <div class="print-section print-section-ingredients">
+        <div class="section-label-print">【ネタ別 必要数（切付用）】</div>
+        ${ingredientTable}
+      </div>
 
-          <div class="section-label-print">【本日合計】</div>
-          ${totalsTable}
-        `;
+      <div class="print-section print-section-totals">
+        <div class="section-label-print">【本日合計】</div>
+        ${totalsTable}
+      </div>
+    `;
         }
+
 
         function attachListeners() {
             cardsDiv.addEventListener("input", (e) => {
