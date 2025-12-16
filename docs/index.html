@@ -405,7 +405,7 @@
                 </div>
                 <div class="toolbar-right">
                     <div class="chip">
-                        <strong>v-0.1</strong>・オフライン対応
+                        <strong id="versionBadge"></strong>・オフライン対応
                     </div>
                     <button class="btn secondary" id="darkToggle" title="ダークモード切替">
                         🌙
@@ -461,8 +461,12 @@
     <div id="printView"></div>
 
     <script>
-        const APP_VERSION = "0.2.1";
+        const APP_VERSION = "0.2.2";
         const STORAGE_KEY = "sushi_daily_packs";
+        const versionEl = document.getElementById("versionBadge");
+        if (versionEl) {
+            versionEl.textContent = `v${APP_VERSION}`;
+        }
         /**
          * Constant: grams per 1 kan (貫)
          * Changing this affects all kg calculations.
@@ -641,6 +645,16 @@
         const PRODUCTS_STORAGE_KEY = "sushi_products_v1";
         const NETA_MAP_STORAGE_KEY = "sushi_neta_map_v1";
 
+        let EDITING_PRODUCT_ID = null;
+
+        function getProductIndexById(id) {
+            return PRODUCTS.findIndex(p => p.id === id);
+        }
+
+        function getProductById(id) {
+            return PRODUCTS.find(p => p.id === id);
+        }
+
         function makeProductId() {
             return `p_${Date.now()}_${Math.random().toString(16).slice(2)}`;
         }
@@ -683,14 +697,14 @@
             const lines = [];
 
             inputs.forEach(input => {
-                const index = Number(input.dataset.index);
+                const productId = input.dataset.productId;
                 const qty = Number(input.value || 0);
-                const p = PRODUCTS[index];
+                const p = getProductById(productId);
                 if (!p) return;
 
                 if (qty !== 0) {
                     lines.push({
-                        productId: p.id,
+                        productId,
                         qty,
                         snap: {
                             name: p.name,
@@ -753,6 +767,7 @@
             let rollHeaderInserted = false;
 
             PRODUCTS.forEach((p, index) => {
+                if (p.isActive === false) return;
                 const isRoll = p.name.endsWith("巻き");
 
                 // Insert 巻物 heading just before the first 巻き item
@@ -775,6 +790,26 @@
                 nameSpan.textContent = p.name;
                 header.appendChild(nameSpan);
 
+                const actions = document.createElement("div");
+                actions.style.display = "flex";
+                actions.style.gap = "6px";
+
+                const editBtn = document.createElement("button");
+                editBtn.className = "btn secondary";
+                editBtn.type = "button";
+                editBtn.textContent = "✏ 編集";
+                editBtn.addEventListener("click", () => openEditProduct(p.id));
+
+                const delBtn = document.createElement("button");
+                delBtn.className = "btn secondary";
+                delBtn.type = "button";
+                delBtn.textContent = "🗑 削除";
+                delBtn.addEventListener("click", () => deleteProduct(p.id));
+
+                actions.appendChild(editBtn);
+                actions.appendChild(delBtn);
+                header.appendChild(actions);
+
                 const inputWrap = document.createElement("div");
                 inputWrap.className = "pack-input-wrap";
                 const label = document.createElement("span");
@@ -787,7 +822,7 @@
                 packInput.min = "0";
                 packInput.step = "1";
                 packInput.value = "0";
-                packInput.dataset.index = index;
+                packInput.dataset.productId = p.id;
                 inputWrap.appendChild(packInput);
 
                 header.appendChild(inputWrap);
@@ -1080,6 +1115,52 @@
             panel.style.display = show ? "block" : "none";
         }
 
+        function openAddProduct() {
+            EDITING_PRODUCT_ID = null;
+
+            document.getElementById("newProductName").value = "";
+            document.getElementById("newProductPrice").value = "";
+            document.getElementById("newProductShari").value = "";
+            document.getElementById("newProductMakiG").value = "";
+            document.getElementById("newProductNetaConfig").value = "";
+
+            document.getElementById("newProductSaveBtn").textContent = "追加";
+            showAddProductPanel(true);
+        }
+
+        function openEditProduct(productId) {
+            const p = getProductById(productId);
+            if (!p) return;
+
+            EDITING_PRODUCT_ID = productId;
+
+            document.getElementById("newProductName").value = p.name ?? "";
+            document.getElementById("newProductPrice").value = p.price ?? "";
+            document.getElementById("newProductShari").value = p.shariPer ?? "";
+            document.getElementById("newProductMakiG").value = p.makiG ?? "";
+            const netaObj = PRODUCT_NETA_MAP[productId] || {};
+            document.getElementById("newProductNetaConfig").value =
+                Object.entries(netaObj).map(([k, v]) => `${k}:${v}`).join(", ");
+
+            document.getElementById("newProductSaveBtn").textContent = "更新";
+            showAddProductPanel(true);
+        }
+
+        function deleteProduct(productId) {
+            const p = getProductById(productId);
+            if (!p) return;
+
+            const ok = confirm(`「${p.name}」を削除しますか？\n※過去データを守るため、この商品は“非表示”になります。`);
+            if (!ok) return;
+
+            p.isActive = false;
+            saveProductConfig();
+
+            buildCards();
+            restoreFromStorage();
+            calculateAll();
+        }
+
         function buildPrintHtmlDocument() {
             const todayStr = new Date().toLocaleDateString("ja-JP", {
                 year: "numeric",
@@ -1333,64 +1414,53 @@
 
             if (saveNewBtn) {
                 saveNewBtn.addEventListener("click", () => {
-                    const nameEl = document.getElementById("newProductName");
-                    const priceEl = document.getElementById("newProductPrice");
-                    const shariEl = document.getElementById("newProductShari");
-                    const makiEl = document.getElementById("newProductMakiG");
-                    const netaEl = document.getElementById("newProductNetaConfig");
+                    const name = document.getElementById("newProductName").value.trim();
+                    const price = Number(document.getElementById("newProductPrice").value || 0);
+                    const shari = Number(document.getElementById("newProductShari").value || 0);
+                    const makiG = Number(document.getElementById("newProductMakiG").value || 0);
+                    const netaText = document.getElementById("newProductNetaConfig").value;
 
-                    const name = nameEl.value.trim();
-                    const price = Number(priceEl.value || 0);
-                    const shari = Number(shariEl.value || 0);
-                    const makiG = Number(makiEl.value || 0);
-                    const netaMap = parseNetaConfig(netaEl.value);
+                    // your existing validation here
+                    if (!name) { alert("商品名を入力してください"); return; }
 
-                    if (!name) {
-                        alert("商品名を入力してください。");
-                        return;
-                    }
-                    if (!Number.isFinite(price) || price <= 0) {
-                        alert("価格を正しく入力してください。");
-                        return;
-                    }
+                    const netaMap = parseNetaConfig(netaText); // use your existing parser
 
-                    // avoid duplicate name
-                    if (PRODUCTS.some(p => p.name === name)) {
-                        alert("同じ商品名が既に存在します。別の名前を入力してください。");
-                        return;
-                    }
+                    if (!EDITING_PRODUCT_ID) {
+                        // ✅ ADD
+                        const newProduct = {
+                            id: makeProductId(),
+                            name,
+                            price,
+                            shariPer: Number.isFinite(shari) ? shari : 0,
+                            makiG: Number.isFinite(makiG) ? makiG : 0,
+                            isActive: true
+                        };
+                        PRODUCTS.push(newProduct);
+                        if (Object.keys(netaMap).length) PRODUCT_NETA_MAP[newProduct.name] = netaMap;
+                    } else {
+                        // ✅ UPDATE
+                        const idx = PRODUCTS.findIndex(p => p.id === EDITING_PRODUCT_ID);
+                        if (idx === -1) return;
 
-                    const newProduct = {
-                        name,
-                        price,
-                        shariPer: Number.isFinite(shari) ? shari : 0,
-                        makiG: Number.isFinite(makiG) ? makiG : 0
-                    };
+                        const oldName = PRODUCTS[idx].name;
+                        PRODUCTS[idx] = { ...PRODUCTS[idx], name, price, shariPer: shari, makiG };
 
-                    PRODUCTS.push(newProduct);
-                    if (Object.keys(netaMap).length > 0) {
-                        PRODUCT_NETA_MAP[name] = netaMap;
+                        // if name-based neta map, move key if renamed:
+                        if (oldName !== name && PRODUCT_NETA_MAP[oldName]) {
+                            PRODUCT_NETA_MAP[name] = PRODUCT_NETA_MAP[oldName];
+                            delete PRODUCT_NETA_MAP[oldName];
+                        }
+                        if (Object.keys(netaMap).length) PRODUCT_NETA_MAP[name] = netaMap;
                     }
 
                     saveProductConfig();
-
-                    // clear inputs
-                    nameEl.value = "";
-                    priceEl.value = "";
-                    shariEl.value = "";
-                    makiEl.value = "";
-                    netaEl.value = "";
+                    localStorage.setItem(NETA_MAP_STORAGE_KEY, JSON.stringify(PRODUCT_NETA_MAP));
 
                     showAddProductPanel(false);
-
-                    // rebuild cards & recalc
                     buildCards();
-                    restoreFromStorage();  // keep existing pack values
+                    restoreFromStorage();
                     calculateAll();
-
-                    alert(`「${name}」を追加しました。`);
                 });
-            }
         }
 
         function restoreFromStorage() {
@@ -1410,9 +1480,7 @@
                 // Fill inputs using current PRODUCTS index -> productId mapping
                 const inputs = cardsDiv.querySelectorAll('input[data-index]');
                 inputs.forEach(input => {
-                    const index = Number(input.dataset.index);
-                    const p = PRODUCTS[index];
-                    if (!p) return;
+                    const id = input.dataset.productId;
                     input.value = qtyById[p.id] || 0;
                 });
             } catch (_) { }
