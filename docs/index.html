@@ -971,7 +971,7 @@
 
             PRODUCTS.forEach((p) => {
                 if (p.isActive === false) return;
-                const sel = i => document.querySelector(`[data-role="row_${p.id}_${i}"]`);
+                const input = document.querySelector(`input[data-index="${index}"]`);
                 const packs = input ? Number(input.value) || 0 : 0;
 
 
