@@ -3,7 +3,7 @@
 <head>
     <!-- Basic meta -->
     <meta charset="UTF-8" />
-    <title>寿司 日次生産アプリ v0.1</title>
+    <title>寿司 日次生産アプリ v0.2</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
 
     <!-- PWA manifest (Android & others) -->
@@ -414,6 +414,9 @@
                     <button class="btn secondary" id="darkToggle" title="ダークモード切替">
                         🌙
                     </button>
+                    <button class="btn secondary" id="addProductToggleBtn">
+                        ＋ 新商品
+                    </button>
                     <button class="btn secondary" id="saveBtn">
                         💾 保存
                     </button>
@@ -430,6 +433,23 @@
             </div>
         </header>
         <main>
+            <section id="addProductPanel" style="display:none; margin-top:8px;">
+                <div class="card" style="box-shadow:none; border-style:dashed;">
+                    <div style="font-weight:600; margin-bottom:4px;">新商品を追加</div>
+                    <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:flex-end; font-size:0.8rem;">
+                        <label>商品名<br><input id="newProductName" type="text" style="width:120px;"></label>
+                        <label>価格(円)<br><input id="newProductPrice" type="number" style="width:80px;"></label>
+                        <label>1Pシャリ(貫)<br><input id="newProductShari" type="number" step="0.1" style="width:80px;"></label>
+                        <label>巻物シャリ(g)<br><input id="newProductMakiG" type="number" step="1" style="width:80px;"></label>
+                        <label>
+                            ネタ構成 (例: 大トロ:4, サーモン:4)<br>
+                            <input id="newProductNetaConfig" type="text" style="min-width:260px;">
+                        </label>
+                        <button class="btn" id="newProductSaveBtn">追加</button>
+                        <button class="btn secondary" id="newProductCancelBtn">キャンセル</button>
+                    </div>
+                </div>
+            </section>
             <section class="cards" id="cards"></section>
             <section class="totals" id="totals">
                 <div class="totals-header">
@@ -445,8 +465,8 @@
     <div id="printView"></div>
 
     <script>
-        const APP_VERSION = "0.1.13";
-        const STORAGE_KEY = "sushi_daily_packs_v0.1.13";
+        const APP_VERSION = "0.2.0";
+        const STORAGE_KEY = "sushi_daily_packs_v0.2.0";
         /**
          * Constant: grams per 1 kan (貫)
          * Changing this affects all kg calculations.
@@ -461,7 +481,7 @@
          * - shariPer: Shari per pack (kan)
          * - makiG: Rice grams for makimono (0 for nigiri items)
          */
-        const PRODUCTS = [
+        const BASE_PRODUCTS = [
             { name: "真", price: 7990, shariPer: 40.0, makiG: 0.0 },
             { name: "美", price: 4990, shariPer: 33.0, makiG: 160.0 },
             { name: "善", price: 5990, shariPer: 36.0, makiG: 160.0 },
@@ -496,7 +516,7 @@
          * 各商品1パックあたり、ネタ何枚かを定義する。
          * ここはお店の「一定」シートに合わせて調整してください。
          */
-        const PRODUCT_NETA_MAP = {
+        const DEFAULT_PRODUCT_NETA_MAP = {
             "真": {
                 "大トロ": 4,
                 "中トロ": 4,
@@ -617,6 +637,26 @@
             "寿エビ": { "寿エビ": 6 },
             "あじ": { "あじ": 6 },
         };
+
+        // Runtime lists (default + user-added)
+        let PRODUCTS = [];
+        let PRODUCT_NETA_MAP = {};
+
+        const PRODUCTS_STORAGE_KEY = "sushi_products_v1";
+        const NETA_MAP_STORAGE_KEY = "sushi_neta_map_v1";
+
+        function loadProductConfig() {
+            const pRaw = localStorage.getItem(PRODUCTS_STORAGE_KEY);
+            const nRaw = localStorage.getItem(NETA_MAP_STORAGE_KEY);
+
+            PRODUCTS = pRaw ? JSON.parse(pRaw) : BASE_PRODUCTS;
+            PRODUCT_NETA_MAP = nRaw ? JSON.parse(nRaw) : DEFAULT_PRODUCT_NETA_MAP;
+        }
+
+        function saveProductConfig() {
+            localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(PRODUCTS));
+            localStorage.setItem(NETA_MAP_STORAGE_KEY, JSON.stringify(PRODUCT_NETA_MAP));
+        }
 
         /**
          * Applies the saved theme ("light" or "dark") from localStorage.
@@ -837,7 +877,6 @@
             window.INGREDIENT_TOTALS = totals;
         }
 
-
         /**
          * 製造サマリー（商品別）テーブルを生成
          */
@@ -952,7 +991,6 @@
             return html;
         }
 
-
         /**
          * 本日合計テーブル
          */
@@ -972,6 +1010,27 @@
             <tr><th>総売上</th><td>¥${Math.round(t.yen).toLocaleString("ja-JP")}</td></tr>
           </table>
         `;
+        }
+
+        function parseNetaConfig(str) {
+            const result = {};
+            if (!str) return result;
+
+            str.split(",").forEach(part => {
+                const pieces = part.split(":");
+                if (pieces.length !== 2) return;
+                const name = pieces[0].trim();
+                const count = Number(pieces[1].trim());
+                if (!name || !Number.isFinite(count) || count <= 0) return;
+                result[name] = count;
+            });
+            return result;
+        }
+
+        function showAddProductPanel(show) {
+            const panel = document.getElementById("addProductPanel");
+            if (!panel) return;
+            panel.style.display = show ? "block" : "none";
         }
 
         function buildPrintHtmlDocument() {
@@ -1179,6 +1238,85 @@
             csvBtn.addEventListener("click", () => {
                 exportCsv();
             });
+
+            const toggleBtn = document.getElementById("addProductToggleBtn");
+            const saveNewBtn = document.getElementById("newProductSaveBtn");
+            const cancelNewBtn = document.getElementById("newProductCancelBtn");
+
+            if (toggleBtn) {
+                toggleBtn.addEventListener("click", () => {
+                    const panel = document.getElementById("addProductPanel");
+                    const isVisible = panel && panel.style.display === "block";
+                    showAddProductPanel(!isVisible);
+                });
+            }
+
+            if (cancelNewBtn) {
+                cancelNewBtn.addEventListener("click", () => {
+                    showAddProductPanel(false);
+                });
+            }
+
+            if (saveNewBtn) {
+                saveNewBtn.addEventListener("click", () => {
+                    const nameEl = document.getElementById("newProductName");
+                    const priceEl = document.getElementById("newProductPrice");
+                    const shariEl = document.getElementById("newProductShari");
+                    const makiEl = document.getElementById("newProductMakiG");
+                    const netaEl = document.getElementById("newProductNetaConfig");
+
+                    const name = nameEl.value.trim();
+                    const price = Number(priceEl.value || 0);
+                    const shari = Number(shariEl.value || 0);
+                    const makiG = Number(makiEl.value || 0);
+                    const netaMap = parseNetaConfig(netaEl.value);
+
+                    if (!name) {
+                        alert("商品名を入力してください。");
+                        return;
+                    }
+                    if (!Number.isFinite(price) || price <= 0) {
+                        alert("価格を正しく入力してください。");
+                        return;
+                    }
+
+                    // avoid duplicate name
+                    if (PRODUCTS.some(p => p.name === name)) {
+                        alert("同じ商品名が既に存在します。別の名前を入力してください。");
+                        return;
+                    }
+
+                    const newProduct = {
+                        name,
+                        price,
+                        shariPer: Number.isFinite(shari) ? shari : 0,
+                        makiG: Number.isFinite(makiG) ? makiG : 0
+                    };
+
+                    PRODUCTS.push(newProduct);
+                    if (Object.keys(netaMap).length > 0) {
+                        PRODUCT_NETA_MAP[name] = netaMap;
+                    }
+
+                    saveProductConfig();
+
+                    // clear inputs
+                    nameEl.value = "";
+                    priceEl.value = "";
+                    shariEl.value = "";
+                    makiEl.value = "";
+                    netaEl.value = "";
+
+                    showAddProductPanel(false);
+
+                    // rebuild cards & recalc
+                    buildCards();
+                    restoreFromStorage();  // keep existing pack values
+                    calculateAll();
+
+                    alert(`「${name}」を追加しました。`);
+                });
+            }
         }
 
         function restoreFromStorage() {
@@ -1252,6 +1390,7 @@
 
         // Init
         applyInitialTheme();
+        loadProductConfig();
         buildCards();
         restoreFromStorage();
         calculateAll();
