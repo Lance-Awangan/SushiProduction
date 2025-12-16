@@ -466,7 +466,7 @@
 
     <script>
         const APP_VERSION = "0.2.1";
-        const STORAGE_KEY = "sushi_daily_packs_v0.2.0";
+        const STORAGE_KEY = "sushi_daily_packs";
         /**
          * Constant: grams per 1 kan (貫)
          * Changing this affects all kg calculations.
@@ -1297,10 +1297,6 @@
             });
 
             saveBtn.addEventListener("click", () => {
-                const packs = PRODUCTS.map((p, index) => {
-                    const input = document.querySelector(`input[data-index="${index}"]`);
-                    return Number(input.value) || 0;
-                });
                 const payload = {
                     version: APP_VERSION,
                     date: todayStr,
