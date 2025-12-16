@@ -461,7 +461,7 @@
     <div id="printView"></div>
 
     <script>
-        const APP_VERSION = "0.2.2";
+        const APP_VERSION = "0.2.5";
         const STORAGE_KEY = "sushi_daily_packs";
         /**
          * Constant: grams per 1 kan (貫)
@@ -667,10 +667,10 @@
                 });
 
                 // Fill inputs using current PRODUCTS index -> productId mapping
-                const inputs = cardsDiv.querySelectorAll('input[data-index]');
+                const inputs = cardsDiv.querySelectorAll('input[data-product-id]');
                 inputs.forEach(input => {
                     const id = input.dataset.productId;
-                    input.value = qtyById[p.id] || 0;
+                    input.value = qtyById[id] || 0;
                 });
             } catch (e) {
                 console.error("restoreFromStorage failed", e);
@@ -706,7 +706,7 @@
             lines.push(["商品名", "本日パック数", "1Pシャリ(貫)", "合計シャリ(貫)", "合計シャリ(kg)", "金額", "巻物(g)", "巻物(kg)"].join(","));
 
             PRODUCTS.forEach((p, index) => {
-                const input = document.querySelector(`input[data-index="${index}"]`);
+                const input = document.querySelector(`input[data-product-id="${p.id}"]`);
                 const packs = Number(input.value) || 0;
                 const totalShariKan = packs * p.shariPer;
                 const totalShariKg = totalShariKan * (GRAMS_PER_KAN / 1000);
@@ -784,7 +784,7 @@
         }
 
         function buildDailyLinesFromInputs() {
-            const inputs = cardsDiv.querySelectorAll('input[data-index]');
+            const inputs = cardsDiv.querySelectorAll('input[data-product-id]');
             const lines = [];
 
             inputs.forEach(input => {
@@ -919,6 +919,7 @@
                 packInput.step = "1";
                 packInput.value = "0";
                 packInput.dataset.productId = p.id;
+                packInput.setAttribute("data-product-id", p.id);
                 inputWrap.appendChild(packInput);
 
                 header.appendChild(inputWrap);
@@ -1079,7 +1080,7 @@
             let totalYen = 0;
 
             PRODUCTS.forEach((p, i) => {
-                const input = document.querySelector(`input[data-index="${i}"]`);
+                const input = document.querySelector(`input[data-product-id="${p.id}"]`);
                 const packs = Number(input?.value) || 0;
                 if (!packs) return;
 
