@@ -862,7 +862,7 @@
 
             let rollHeaderInserted = false;
 
-            PRODUCTS.forEach((p, index) => {
+            PRODUCTS.forEach((p) => {
                 if (p.isActive === false) return;
                 const isRoll = p.name.endsWith("巻き");
 
@@ -971,7 +971,7 @@
 
             PRODUCTS.forEach((p) => {
                 if (p.isActive === false) return;
-                const input = document.querySelector(`input[data-index="${p.id}"]`);
+                const input = document.querySelector(`input[data-product-id="${p.id}"]`);
                 const packs = input ? Number(input.value) || 0 : 0;
 
 
@@ -1039,9 +1039,9 @@
         function computeIngredientTotalsFromInputs() {
             const totals = {}; // { "大トロ": 40, "サーモン": 28, ... }
 
-            PRODUCTS.forEach((p, index) => {
-                const input = document.querySelector(`input[data-index="${index}"]`);
-                const packs = Number(input?.value) || 0;
+            PRODUCTS.forEach((p) => {
+                const input = document.querySelector(`input[data-product-id="${p.id}"]`);
+                const packs = input ? Number(input.value) || 0 : 0;
                 if (!packs) return;
 
                 const netaInfo = PRODUCT_NETA_MAP[p.name];
@@ -1260,6 +1260,22 @@
         }
 
         function buildPrintHtmlDocument() {
+            let saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "null");
+            saved = normalizeDailyPayload(saved);
+
+            const lines = saved.lines || []; // [{productId, qty, snap}]
+            lines.forEach(line => {
+                const qty = Number(line.qty || 0);
+                if (qty <= 0) return;
+
+                const s = line.snap || {};
+                const name = s.name || (getProductById(line.productId)?.name ?? "Unknown");
+                const shariPer = Number(s.shariPer || 0);
+                const price = Number(s.price || 0);
+                const makiG = Number(s.makiG || 0);
+
+                // compute totals using qty...
+            });
             const todayStr = new Date().toLocaleDateString("ja-JP", {
                 year: "numeric",
                 month: "2-digit",
