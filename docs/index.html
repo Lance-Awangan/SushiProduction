@@ -989,7 +989,7 @@
                 // この商品の合計シャリ(kg) = にぎり + 巻物
                 const totalKgForCard = nigiriKg + makiKg;
 
-                const sel = i => document.querySelector(`[data-role="row${index}_${i}"]`);
+                const sel = i => document.querySelector(`[data-role="row${p.id}_${i}"]`);
                 // row0: 1パック当たりシャリ(貫)
                 if (sel(0)) sel(0).textContent = p.shariPer.toFixed(2);
                 // row1: 合計シャリ(貫)
