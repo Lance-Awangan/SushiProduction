@@ -971,7 +971,7 @@
 
             PRODUCTS.forEach((p) => {
                 if (p.isActive === false) return;
-                const input = document.querySelector(`input[data-index="${index}"]`);
+                const input = document.querySelector(`input[data-index="${p.id}"]`);
                 const packs = input ? Number(input.value) || 0 : 0;
 
 
