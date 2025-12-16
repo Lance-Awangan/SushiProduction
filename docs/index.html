@@ -465,7 +465,7 @@
     <div id="printView"></div>
 
     <script>
-        const APP_VERSION = "0.2.0";
+        const APP_VERSION = "0.2.1";
         const STORAGE_KEY = "sushi_daily_packs_v0.2.0";
         /**
          * Constant: grams per 1 kan (貫)
@@ -645,6 +645,30 @@
         const PRODUCTS_STORAGE_KEY = "sushi_products_v1";
         const NETA_MAP_STORAGE_KEY = "sushi_neta_map_v1";
 
+        function makeProductId() {
+            return `p_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+        }
+
+        function ensureProductIdsAndFlags() {
+            let changed = false;
+
+            PRODUCTS = (PRODUCTS || []).map(p => {
+                const next = { ...p };
+
+                if (!next.id) {
+                    next.id = makeProductId();
+                    changed = true;
+                }
+                if (next.isActive === undefined) {
+                    next.isActive = true;
+                    changed = true;
+                }
+                return next;
+            });
+
+            if (changed) saveProductConfig();
+        }
+
         function loadProductConfig() {
             const pRaw = localStorage.getItem(PRODUCTS_STORAGE_KEY);
             const nRaw = localStorage.getItem(NETA_MAP_STORAGE_KEY);
@@ -656,6 +680,33 @@
         function saveProductConfig() {
             localStorage.setItem(PRODUCTS_STORAGE_KEY, JSON.stringify(PRODUCTS));
             localStorage.setItem(NETA_MAP_STORAGE_KEY, JSON.stringify(PRODUCT_NETA_MAP));
+        }
+
+        function buildDailyLinesFromInputs() {
+            const inputs = cardsDiv.querySelectorAll('input[data-index]');
+            const lines = [];
+
+            inputs.forEach(input => {
+                const index = Number(input.dataset.index);
+                const qty = Number(input.value || 0);
+                const p = PRODUCTS[index];
+                if (!p) return;
+
+                if (qty !== 0) {
+                    lines.push({
+                        productId: p.id,
+                        qty,
+                        snap: {
+                            name: p.name,
+                            price: p.price,
+                            shariPer: p.shariPer,
+                            makiG: p.makiG
+                        }
+                    });
+                }
+            });
+
+            return lines;
         }
 
         /**
@@ -1177,6 +1228,30 @@
     `;
         }
 
+        function normalizeDailyPayload(payload) {
+            if (payload && Array.isArray(payload.lines)) return payload;
+
+            // old format
+            if (payload && Array.isArray(payload.packs)) {
+                const lines = payload.packs
+                    .map((qty, index) => {
+                        const p = PRODUCTS[index];
+                        const n = Number(qty || 0);
+                        if (!p || n === 0) return null;
+                        return {
+                            productId: p.id,
+                            qty: n,
+                            snap: { name: p.name, price: p.price, shariPer: p.shariPer, makiG: p.makiG }
+                        };
+                    })
+                    .filter(Boolean);
+
+                return { version: APP_VERSION, date: payload.date || "", lines };
+            }
+
+            return { version: APP_VERSION, date: payload?.date || "", lines: [] };
+        }
+
 
         function attachListeners() {
             cardsDiv.addEventListener("input", (e) => {
@@ -1228,8 +1303,8 @@
                 });
                 const payload = {
                     version: APP_VERSION,
-                    date: new Date().toISOString().slice(0, 10),
-                    packs
+                    date: todayStr,
+                    lines: buildDailyLinesFromInputs()
                 };
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
                 alert("本日のパック数を保存しました。");
@@ -1322,12 +1397,24 @@
         function restoreFromStorage() {
             const raw = localStorage.getItem(STORAGE_KEY);
             if (!raw) return;
+
             try {
-                const data = JSON.parse(raw);
-                if (!Array.isArray(data.packs)) return;
-                data.packs.forEach((v, index) => {
-                    const input = document.querySelector(`input[data-index="${index}"]`);
-                    if (input) input.value = v;
+                let data = JSON.parse(raw);
+                data = normalizeDailyPayload(data); // ✅ add this (supports packs + lines)
+
+                // Build lookup: productId -> qty
+                const qtyById = {};
+                (data.lines || []).forEach(line => {
+                    qtyById[line.productId] = Number(line.qty || 0);
+                });
+
+                // Fill inputs using current PRODUCTS index -> productId mapping
+                const inputs = cardsDiv.querySelectorAll('input[data-index]');
+                inputs.forEach(input => {
+                    const index = Number(input.dataset.index);
+                    const p = PRODUCTS[index];
+                    if (!p) return;
+                    input.value = qtyById[p.id] || 0;
                 });
             } catch (_) { }
         }
@@ -1391,6 +1478,7 @@
         // Init
         applyInitialTheme();
         loadProductConfig();
+        ensureProductIdsAndFlags();
         buildCards();
         restoreFromStorage();
         calculateAll();
