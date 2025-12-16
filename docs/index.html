@@ -463,10 +463,6 @@
     <script>
         const APP_VERSION = "0.2.2";
         const STORAGE_KEY = "sushi_daily_packs";
-        const versionEl = document.getElementById("versionBadge");
-        if (versionEl) {
-            versionEl.textContent = `v${APP_VERSION}`;
-        }
         /**
          * Constant: grams per 1 kan (貫)
          * Changing this affects all kg calculations.
@@ -647,6 +643,101 @@
 
         let EDITING_PRODUCT_ID = null;
 
+        // ===== Helpers / CRUD =====
+        function getTodayISO() {
+            const d = new Date();
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, "0");
+            const day = String(d.getDate()).padStart(2, "0");
+            return `${y}-${m}-${day}`;
+        }
+
+        function restoreFromStorage() {
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (!raw) return;
+
+            try {
+                let data = JSON.parse(raw);
+                data = normalizeDailyPayload(data); // ✅ add this (supports packs + lines)
+
+                // Build lookup: productId -> qty
+                const qtyById = {};
+                (data.lines || []).forEach(line => {
+                    qtyById[line.productId] = Number(line.qty || 0);
+                });
+
+                // Fill inputs using current PRODUCTS index -> productId mapping
+                const inputs = cardsDiv.querySelectorAll('input[data-index]');
+                inputs.forEach(input => {
+                    const id = input.dataset.productId;
+                    input.value = qtyById[p.id] || 0;
+                });
+            } catch (e) {
+                console.error("restoreFromStorage failed", e);
+            }
+        }
+
+        function normalizeDailyPayload(payload) {
+            if (payload && Array.isArray(payload.lines)) return payload;
+
+            // old format
+            if (payload && Array.isArray(payload.packs)) {
+                const lines = payload.packs
+                    .map((qty, index) => {
+                        const p = PRODUCTS[index];
+                        const n = Number(qty || 0);
+                        if (!p || n === 0) return null;
+                        return {
+                            productId: p.id,
+                            qty: n,
+                            snap: { name: p.name, price: p.price, shariPer: p.shariPer, makiG: p.makiG }
+                        };
+                    })
+                    .filter(Boolean);
+
+                return { version: APP_VERSION, date: payload.date || "", lines };
+            }
+
+            return { version: APP_VERSION, date: payload?.date || "", lines: [] };
+        }
+
+        function exportCsv() {
+            const lines = [];
+            lines.push(["商品名", "本日パック数", "1Pシャリ(貫)", "合計シャリ(貫)", "合計シャリ(kg)", "金額", "巻物(g)", "巻物(kg)"].join(","));
+
+            PRODUCTS.forEach((p, index) => {
+                const input = document.querySelector(`input[data-index="${index}"]`);
+                const packs = Number(input.value) || 0;
+                const totalShariKan = packs * p.shariPer;
+                const totalShariKg = totalShariKan * (GRAMS_PER_KAN / 1000);
+                const totalPrice = packs * p.price;
+                const totalMakiG = packs * p.makiG;
+                const totalMakiKg = totalMakiG / 1000;
+
+                lines.push([
+                    `"${p.name}"`,
+                    packs,
+                    p.shariPer.toFixed(2),
+                    totalShariKan.toFixed(2),
+                    totalShariKg.toFixed(3),
+                    Math.round(totalPrice),
+                    totalMakiG.toFixed(0),
+                    totalMakiKg.toFixed(3)
+                ].join(","));
+            });
+
+            const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            const date = new Date().toISOString().slice(0, 10);
+            a.href = url;
+            a.download = `sushi_daily_${date}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
         function getProductIndexById(id) {
             return PRODUCTS.findIndex(p => p.id === id);
         }
@@ -741,6 +832,11 @@
             document.documentElement.classList.toggle("dark");
             const isDark = document.documentElement.classList.contains("dark");
             localStorage.setItem("sushi_theme", isDark ? "dark" : "light");
+        }
+
+        const versionEl = document.getElementById("versionBadge");
+        if (versionEl) {
+            versionEl.textContent = `v${APP_VERSION}`;
         }
 
         // === State & DOM references ===
@@ -1305,38 +1401,6 @@
     `;
         }
 
-        function normalizeDailyPayload(payload) {
-            if (payload && Array.isArray(payload.lines)) return payload;
-
-            // old format
-            if (payload && Array.isArray(payload.packs)) {
-                const lines = payload.packs
-                    .map((qty, index) => {
-                        const p = PRODUCTS[index];
-                        const n = Number(qty || 0);
-                        if (!p || n === 0) return null;
-                        return {
-                            productId: p.id,
-                            qty: n,
-                            snap: { name: p.name, price: p.price, shariPer: p.shariPer, makiG: p.makiG }
-                        };
-                    })
-                    .filter(Boolean);
-
-                return { version: APP_VERSION, date: payload.date || "", lines };
-            }
-
-            return { version: APP_VERSION, date: payload?.date || "", lines: [] };
-        }
-
-        function getTodayISO() {
-            const d = new Date();
-            const y = d.getFullYear();
-            const m = String(d.getMonth() + 1).padStart(2, "0");
-            const day = String(d.getDate()).padStart(2, "0");
-            return `${y}-${m}-${day}`;
-        }
-
         function attachListeners() {
             cardsDiv.addEventListener("input", (e) => {
                 if (e.target.matches('input[type="number"]')) {
@@ -1462,85 +1526,25 @@
                     calculateAll();
                 });
             }
+        }
 
-            function restoreFromStorage() {
-                const raw = localStorage.getItem(STORAGE_KEY);
-                if (!raw) return;
+        // PWA registration with version log
+        if ("serviceWorker" in navigator) {
+            window.addEventListener("load", () => {
+                navigator.serviceWorker.register("service-worker.js")
+                    .then(reg => {
+                        console.log("SW registered:", reg.scope, "version", APP_VERSION);
+                    })
+                    .catch(err => console.error("SW registration failed:", err));
+            });
 
-                try {
-                    let data = JSON.parse(raw);
-                    data = normalizeDailyPayload(data); // ✅ add this (supports packs + lines)
-
-                    // Build lookup: productId -> qty
-                    const qtyById = {};
-                    (data.lines || []).forEach(line => {
-                        qtyById[line.productId] = Number(line.qty || 0);
-                    });
-
-                    // Fill inputs using current PRODUCTS index -> productId mapping
-                    const inputs = cardsDiv.querySelectorAll('input[data-index]');
-                    inputs.forEach(input => {
-                        const id = input.dataset.productId;
-                        input.value = qtyById[p.id] || 0;
-                    });
-                } catch (_) { }
-            }
-
-            function exportCsv() {
-                const lines = [];
-                lines.push(["商品名", "本日パック数", "1Pシャリ(貫)", "合計シャリ(貫)", "合計シャリ(kg)", "金額", "巻物(g)", "巻物(kg)"].join(","));
-
-                PRODUCTS.forEach((p, index) => {
-                    const input = document.querySelector(`input[data-index="${index}"]`);
-                    const packs = Number(input.value) || 0;
-                    const totalShariKan = packs * p.shariPer;
-                    const totalShariKg = totalShariKan * (GRAMS_PER_KAN / 1000);
-                    const totalPrice = packs * p.price;
-                    const totalMakiG = packs * p.makiG;
-                    const totalMakiKg = totalMakiG / 1000;
-
-                    lines.push([
-                        `"${p.name}"`,
-                        packs,
-                        p.shariPer.toFixed(2),
-                        totalShariKan.toFixed(2),
-                        totalShariKg.toFixed(3),
-                        Math.round(totalPrice),
-                        totalMakiG.toFixed(0),
-                        totalMakiKg.toFixed(3)
-                    ].join(","));
-                });
-
-                const blob = new Blob([lines.join("\n")], { type: "text/csv;charset=utf-8;" });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement("a");
-                const date = new Date().toISOString().slice(0, 10);
-                a.href = url;
-                a.download = `sushi_daily_${date}.csv`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-            }
-
-            // PWA registration with version log
-            if ("serviceWorker" in navigator) {
-                window.addEventListener("load", () => {
-                    navigator.serviceWorker.register("service-worker.js")
-                        .then(reg => {
-                            console.log("SW registered:", reg.scope, "version", APP_VERSION);
-                        })
-                        .catch(err => console.error("SW registration failed:", err));
-                });
-
-                // 🔔 listen for "NEW_VERSION" from the SW and auto-reload
-                navigator.serviceWorker.addEventListener("message", (event) => {
-                    if (event.data && event.data.type === "NEW_VERSION") {
-                        console.log("New SW version available, reloading page...");
-                        window.location.reload();
-                    }
-                });
-            }
+            // 🔔 listen for "NEW_VERSION" from the SW and auto-reload
+            navigator.serviceWorker.addEventListener("message", (event) => {
+                if (event.data && event.data.type === "NEW_VERSION") {
+                    console.log("New SW version available, reloading page...");
+                    window.location.reload();
+                }
+            });
         }
 
         // Init
