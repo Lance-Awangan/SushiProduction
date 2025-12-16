@@ -1252,6 +1252,13 @@
             return { version: APP_VERSION, date: payload?.date || "", lines: [] };
         }
 
+        function getTodayISO() {
+            const d = new Date();
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, "0");
+            const day = String(d.getDate()).padStart(2, "0");
+            return `${y}-${m}-${day}`;
+        }
 
         function attachListeners() {
             cardsDiv.addEventListener("input", (e) => {
@@ -1299,7 +1306,7 @@
             saveBtn.addEventListener("click", () => {
                 const payload = {
                     version: APP_VERSION,
-                    date: todayStr,
+                    date: getTodayISO(),
                     lines: buildDailyLinesFromInputs()
                 };
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
