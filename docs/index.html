@@ -943,7 +943,7 @@
                     rowLabel.textContent = r[0];
                     const valueSpan = document.createElement("span");
                     if (i === 0) valueSpan.textContent = r[1];
-                    valueSpan.dataset.role = `row${index}_${i}`;
+                    valueSpan.dataset.role = `row${p.id}_${i}`;
                     row.appendChild(rowLabel);
                     row.appendChild(valueSpan);
                     grid.appendChild(row);
@@ -969,9 +969,11 @@
             let totalYen = 0;
             let totalMakiKg = 0;  // 巻物シャリ(kg)
 
-            PRODUCTS.forEach((p, index) => {
-                const input = document.querySelector(`input[data-index="${index}"]`);
-                const packs = Number(input.value) || 0;
+            PRODUCTS.forEach((p) => {
+                if (p.isActive === false) return;
+                const sel = i => document.querySelector(`[data-role="row_${p.id}_${i}"]`);
+                const packs = input ? Number(input.value) || 0 : 0;
+
 
                 // にぎり / 丼 のシャリ(貫) → kg
                 const totalShariKan = packs * p.shariPer;
